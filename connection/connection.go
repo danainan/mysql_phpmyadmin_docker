@@ -1,6 +1,7 @@
 package connection
 
 import (
+	"auth/config"
 	"auth/models"
 	"log"
 	"os"
@@ -15,7 +16,7 @@ var (
 
 func InitMySQL() {
 
-	dsn := "root:root@tcp(:3306)/user_docker?charset=utf8mb4&parseTime=true&loc=Local"
+	dsn := config.Config("DNS")
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 

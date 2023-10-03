@@ -1,11 +1,11 @@
 package handler
 
 import (
+	"auth/config"
 	"auth/connection"
 	"auth/models"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,7 +20,7 @@ func hashPassword(password string) (string, error) {
 }
 
 func Hello(ctx *fiber.Ctx) error {
-	return ctx.JSON(fiber.Map{"status": "success", "message": "Hello fiber!!!!", "data": nil})
+	return ctx.JSON(fiber.Map{"status": "success", "message": "Api Connected", "data": nil})
 }
 
 func Register(ctx *fiber.Ctx) error {
@@ -65,12 +65,13 @@ func Login(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"status": "error", "message": "Invalid password", "data": nil})
 	}
 
-	secret := []byte("SECRET")
+	secret := []byte(config.Config("SECRET"))
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
+	claims["id"] = user.ID
 	claims["email"] = user.Email
 	claims["role"] = "admin"
-	claims["exp"] = time.Now().Add(time.Hour * 1).Unix()
+	claims["exp"] = time.Now().Add(time.Minute * 1).Unix()
 	t, err := token.SignedString(secret)
 	if err != nil {
 		return ctx.SendStatus(fiber.StatusInternalServerError)
@@ -82,40 +83,21 @@ func Login(ctx *fiber.Ctx) error {
 
 func GetAllUser(ctx *fiber.Ctx) error {
 	db := connection.DBConn
-	secret := []byte("SECRET")
 	var users []models.User
-	authHeader := ctx.Get(fiber.HeaderAuthorization)
-	authToken := ""
-	if authHeader != "" {
-		authToken = strings.Split(authHeader, " ")[1]
-	}
-
-	token, err := jwt.Parse(authToken, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Invalid signing method %v", token.Header["alg"])
-		}
-		fmt.Println(authToken)
-		return secret, nil
-	})
-	if err != nil {
-		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"message": "Invalid token",
-		})
-	}
-	if !token.Valid {
-		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"message": "Token is not valid",
-		})
-	}
-
-	var user models.User
-	if err := db.Where("email = ?", user.Email).First(&user).Error; err != nil {
-		if err == nil {
-			return ctx.Status(401).JSON(fiber.Map{"status": "error", "message": "Email not found"})
-		}
-	}
 
 	db.Find(&users)
 
 	return ctx.Status(200).JSON(fiber.Map{"status": "ok", "message": "User Read Success", "users": users})
+}
+
+func GetById(ctx *fiber.Ctx) error {
+	id := ctx.Locals("id").(int)
+
+	fmt.Println("id =>>>>>>>> ", id)
+	var user models.User
+
+	db := connection.DBConn
+
+	db.First(&user, id)
+	return ctx.Status(200).JSON(fiber.Map{"status": "ok", "message": "User Read Success", "users": user})
 }
