@@ -12,7 +12,7 @@ func main() {
 	connection.InitMySQL()
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
+		AllowOrigins: "http://localhost:3000",
 		AllowMethods: "GET, POST, PUT, DELETE",
 	}))
 	router.SetUpRoutes(app)
